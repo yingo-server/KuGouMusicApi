@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>锐角音乐 · 手动测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        :root {
+            --bg-primary: #2C2C34;
+            --accent: #00D4FF;
+            --text-primary: #F0F0F0;
+            --text-secondary: #B0B0B8;
+            --border-subtle: #3A3A44;
+            --shadow-dark: rgba(0,0,0,0.35);
+            --input-bg: #1E1E24;
+            --toast-bg: #1E1E24;
+            --overlay-dark: rgba(0,0,0,0.85);
+        }
+        [data-theme="light"] {
+            --bg-primary: #E6F7FF;
+            --accent: #89C2FF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #4A4A54;
+            --border-subtle: #C0D6E6;
+            --shadow-dark: rgba(0,0,0,0.12);
+            --input-bg: #FFFFFF;
+            --toast-bg: #FFFFFF;
+            --overlay-dark: rgba(255,255,255,0.85);
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            transition: background 0.2s;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--accent);
+            padding-left: 16px;
+        }
+        .sub {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            padding-left: 20px;
+        }
+        .toolbar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .api-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: var(--input-bg);
+            padding: 20px;
+            border-left: 3px solid var(--accent);
+        }
+        .api-btn {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .api-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+        .log-container {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            padding: 16px;
+            margin-bottom: 20px;
+            max-height: 550px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            border-left: 3px solid var(--accent);
+            padding: 10px;
+            margin-bottom: 16px;
+            background: rgba(0,212,255,0.05);
+        }
+        .log-error {
+            border-left-color: #ff5c5c;
+            background: rgba(255,92,92,0.1);
+        }
+        .download-area {
+            text-align: right;
+            margin-top: 16px;
+        }
+        button.download, button.relogin {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 8px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: 12px;
+        }
+        button.download:hover, button.relogin:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: var(--toast-bg);
+            border-left: 3px solid var(--accent);
+            padding: 12px 20px;
+            transform: translateX(140%);
+            transition: transform 0.2s;
+            z-index: 1000;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+        .toast.show { transform: translateX(0); }
+        hr { border-color: var(--border-subtle); margin: 16px 0; }
+
+        /* 登录弹窗 (精简版，复用之前样式) */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--overlay-dark);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            position: relative;
+            width: 90%;
+            max-width: 420px;
+            background: var(--bg-primary);
+            border-top: 3px solid var(--accent);
+            box-shadow: 0 24px 48px var(--shadow-dark);
+            padding: 20px;
+        }
+        .close-login {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .login-tabs {
+            display: flex;
+            gap: 20px;
+            border-bottom: 2px solid var(--border-subtle);
+            margin-bottom: 20px;
+        }
+        .login-tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .login-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+        .login-panel { display: none; }
+        .login-panel.active { display: block; }
+        .input-group { margin-bottom: 16px; }
+        .input-field {
+            width: 100%;
+            background: var(--input-bg);
+            border: 2px solid var(--border-subtle);
+            padding: 13px 14px;
+            font-size: 15px;
+            color: var(--text-primary);
+            outline: none;
+        }
+        .input-field:focus { border-color: var(--accent); }
+        .code-row { display: flex; gap: 10px; }
+        .code-row .input-group { flex: 1; }
+        .code-btn {
+            background: var(--input-bg);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 0 16px;
+            cursor: pointer;
+        }
+        .login-btn {
+            width: 100%;
+            background: var(--accent);
+            border: none;
+            padding: 12px;
+            color: var(--bg-primary);
+            font-weight: bold;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+        .qr-placeholder {
+            background: var(--input-bg);
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        .keyboard-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--overlay-dark);
+            z-index: 10001;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .keyboard-overlay.active { visibility: visible; opacity: 1; }
+        .custom-keyboard {
+            background: var(--input-bg);
+            width: 100%;
+            max-width: 500px;
+            padding: 16px 12px 24px;
+            border-top: 1px solid var(--accent);
+        }
+        .keyboard-rows { display: flex; flex-direction: column; gap: 10px; }
+        .key-row { display: flex; justify-content: center; gap: 12px; }
+        .key-btn {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            font-size: 24px;
+            padding: 12px 0;
+            color: var(--text-primary);
+            text-align: center;
+            cursor: pointer;
+        }
+        .key-btn:active { border-color: var(--accent); color: var(--accent); }
+        .key-zero { flex: 2; }
+        .key-enter { background: var(--accent); color: var(--bg-primary); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>酷狗音乐 API · 手动测试</h1>
+    <div class="sub">点击按钮单独测试 | 依赖前置测试的接口会有提示</div>
+    <div class="toolbar">
+        <button id="reloginBtn" class="relogin">重新登录</button>
+    </div>
+
+    <div class="api-buttons" id="apiButtons"></div>
+
+    <div class="log-container" id="logContainer">
+        <div class="log-entry">点击上方按钮开始测试，详细日志将显示在此处</div>
+    </div>
+
+    <div class="download-area">
+        <button id="downloadBtn" class="download">下载当前测试日志 (DataURL)</button>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+    (function(){
+        // 主题自动切换
+        function setTheme() {
+            const hour = new Date().getHours();
+            document.documentElement.setAttribute('data-theme', (hour>=6 && hour<18) ? 'light' : 'dark');
+        }
+        setTheme(); setInterval(setTheme, 10*60*1000);
+
+        const API_BASE = 'https://kapi.344977.xyz';
+        let currentTestResult = null;
+        let savedSongHash = null;       // 从搜索中保存的哈希
+        let savedAlbumAudioId = null;   // 从搜索中保存的 album_audio_id
+        let dfid = null;
+
+        function toast(msg) {
+            const toastEl = document.getElementById('toast');
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            setTimeout(() => toastEl.classList.remove('show'), 2000);
+        }
+
+        async function fetchDfid() {
+            if(dfid) return dfid;
+            try {
+                const res = await fetch(`${API_BASE}/register/dev?timestamp=${Date.now()}`, { credentials: 'include' });
+                const data = await res.json();
+                dfid = data.dfid || data.data?.dfid;
+                if(dfid) document.cookie = `dfid=${dfid}; path=/; max-age=2592000`;
+                return dfid;
+            } catch(e) { return null; }
+        }
+
+        // 增强 fetch，自动携带 cookie，返回结果包含解析后的 JSON 对象（如果可能）
+        async function detailedFetch(url, options = {}) {
+            const start = Date.now();
+            const reqHeaders = {
+                'User-Agent': 'Mozilla/5.0 (compatible; KuGouTest/2.0)',
+                ...(options.headers || {})
+            };
+            let cookieStr = document.cookie;
+            if(cookieStr) reqHeaders['Cookie'] = cookieStr;
+            const fetchOptions = { ...options, credentials: 'include', headers: reqHeaders };
+            let requestDetails = { url, method: options.method || 'GET', headers: reqHeaders };
+            let responseDetails = null;
+            let text = '';
+            let parsedBody = null;
+            try {
+                const response = await fetch(url, fetchOptions);
+                const respHeaders = {};
+                for(let [k,v] of response.headers.entries()) respHeaders[k] = v;
+                text = await response.text();
+                // 尝试解析为 JSON
+                try {
+                    parsedBody = JSON.parse(text);
+                } catch(e) {
+                    parsedBody = text; // 非 JSON 保持字符串
+                }
+                responseDetails = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: respHeaders,
+                    body: parsedBody,        // 存储解析后的对象或原始字符串
+                    rawBody: text
+                };
+                return { ok: response.ok, status: response.status, data: parsedBody, rawData: text, responseDetails, requestDetails, duration: Date.now()-start };
+            } catch(err) {
+                responseDetails = { error: err.message };
+                return { ok: false, status: 0, data: null, responseDetails, requestDetails, duration: Date.now()-start, error: err.message };
+            }
+        }
+
+        // 格式化显示响应体（如果是对象则漂亮打印，否则原样）
+        function formatBody(body) {
+            if (body && typeof body === 'object') {
+                return JSON.stringify(body, null, 2);
+            }
+            return String(body);
+        }
+
+        function renderLog(testName, requestDetails, responseDetails, duration, isError) {
+            const logDiv = document.getElementById('logContainer');
+            logDiv.innerHTML = '';
+            const entryDiv = document.createElement('div');
+            entryDiv.className = `log-entry ${isError ? 'log-error' : ''}`;
+            const timestamp = new Date().toISOString().slice(0,19).replace('T',' ');
+            let html = `<strong>[${timestamp}] ${testName}</strong><br>`;
+            html += `<strong>请求URL:</strong> ${requestDetails.url}<br>`;
+            html += `<strong>请求方法:</strong> ${requestDetails.method}<br>`;
+            html += `<strong>请求头:</strong> ${JSON.stringify(requestDetails.headers, null, 2)}<br>`;
+            html += `<strong>响应状态:</strong> ${responseDetails.status} ${responseDetails.statusText}<br>`;
+            html += `<strong>响应头:</strong> ${JSON.stringify(responseDetails.headers, null, 2)}<br>`;
+            html += `<strong>耗时:</strong> ${duration} ms<br>`;
+            html += `<strong>完整响应体:</strong><br><pre style="background:#00000022; padding:8px; overflow-x:auto;">${escapeHtml(formatBody(responseDetails.body))}</pre>`;
+            entryDiv.innerHTML = html;
+            logDiv.appendChild(entryDiv);
+            // 存储测试结果，响应体为对象或字符串，保证下载时整洁
+            currentTestResult = {
+                timestamp, testName,
+                request: { url: requestDetails.url, method: requestDetails.method, headers: requestDetails.headers },
+                response: {
+                    status: responseDetails.status,
+                    statusText: responseDetails.statusText,
+                    headers: responseDetails.headers,
+                    body: responseDetails.body   // 存储解析后的对象（如果是JSON）
+                },
+                durationMs: duration, success: !isError
+            };
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+        }
+
+        // ---------- 登录弹窗 (复用之前的精简版) ----------
+        let loginModalActive = false;
+        function showLoginModal() {
+            return new Promise((resolve) => {
+                if (loginModalActive) return;
+                loginModalActive = true;
+                const modal = document.createElement('div');
+                modal.className = 'login-overlay';
+                modal.innerHTML = `
+                    <div class="login-card">
+                        <button class="close-login" id="closeLoginBtn">×</button>
+                        <div class="login-tabs" id="loginTabs">
+                            <button class="login-tab active" data-tab="sms">验证码登录</button>
+                            <button class="login-tab" data-tab="qr">扫码登录</button>
+                            <button class="login-tab" data-tab="pwd">密码登录</button>
+                        </div>
+                        <div class="login-panels">
+                            <div class="login-panel active" data-panel="sms">
+                                <div class="input-group"><input type="tel" class="input-field" id="mobileInput" placeholder="手机号"></div>
+                                <div class="code-row">
+                                    <div class="input-group"><input type="text" class="input-field" id="smsCodeInput" placeholder="验证码"></div>
+                                    <button id="sendCodeBtn" class="code-btn">获取验证码</button>
+                                </div>
+                            </div>
+                            <div class="login-panel" data-panel="qr"><div class="qr-placeholder" id="qrBox">二维码区域</div></div>
+                            <div class="login-panel" data-panel="pwd">
+                                <div class="input-group"><input type="text" class="input-field" id="userInput" placeholder="手机号/用户名"></div>
+                                <div class="input-group"><input type="password" class="input-field" id="passInput" placeholder="密码"></div>
+                            </div>
+                        </div>
+                        <button class="login-btn" id="doLoginBtn">登录</button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                let activeTab = 'sms';
+                let qrTimer = null, qrKey = null;
+                let keyboardOverlay = null;
+
+                function initKeyboard() {
+                    if(keyboardOverlay) return;
+                    const kbDiv = document.createElement('div');
+                    kbDiv.className = 'keyboard-overlay';
+                    kbDiv.innerHTML = `<div class="custom-keyboard"><div class="keyboard-rows"><div class="key-row"><div class="key-btn" data-key="1">1</div><div class="key-btn" data-key="2">2</div><div class="key-btn" data-key="3">3</div></div><div class="key-row"><div class="key-btn" data-key="4">4</div><div class="key-btn" data-key="5">5</div><div class="key-btn" data-key="6">6</div></div><div class="key-row"><div class="key-btn" data-key="7">7</div><div class="key-btn" data-key="8">8</div><div class="key-btn" data-key="9">9</div></div><div class="key-row"><div class="key-btn" data-key="delete">⌫</div><div class="key-btn key-zero" data-key="0">0</div><div class="key-btn key-enter" data-key="enter">↵</div></div></div></div>`;
+                    document.body.appendChild(kbDiv);
+                    keyboardOverlay = kbDiv;
+                    let currentInput = null, currentGroup = null, pending = '';
+                    function openKeyboard(inputEl, groupEl) {
+                        if(currentGroup) currentGroup.classList.remove('stretch-active');
+                        currentInput = inputEl; currentGroup = groupEl; pending = inputEl.value;
+                        if(groupEl) groupEl.classList.add('stretch-active');
+                        keyboardOverlay.classList.add('active');
+                    }
+                    function closeKeyboard() {
+                        keyboardOverlay.classList.remove('active');
+                        if(currentGroup) currentGroup.classList.remove('stretch-active');
+                        currentInput = null; currentGroup = null;
+                    }
+                    function commit() {
+                        if(currentInput) { currentInput.value = pending; currentInput.dispatchEvent(new Event('input')); }
+                        closeKeyboard();
+                    }
+                    kbDiv.querySelectorAll('.key-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if(!currentInput) return;
+                            const key = btn.getAttribute('data-key');
+                            if(key === 'delete') pending = pending.slice(0, -1);
+                            else if(key === 'enter') commit();
+                            else pending += key;
+                            if(currentInput) currentInput.value = pending;
+                        });
+                    });
+                    kbDiv.addEventListener('click', (e) => { if(e.target === kbDiv) commit(); });
+                    return { openKeyboard, closeKeyboard };
+                }
+                const keyboard = initKeyboard();
+
+                function bindInputs() {
+                    const mobileInput = document.getElementById('mobileInput');
+                    const smsInput = document.getElementById('smsCodeInput');
+                    const mobileGroup = mobileInput?.parentElement;
+                    const smsGroup = smsInput?.parentElement;
+                    if(mobileInput && mobileGroup) {
+                        mobileInput.addEventListener('focus', (e) => { e.preventDefault(); keyboard.openKeyboard(mobileInput, mobileGroup); });
+                        mobileInput.addEventListener('click', (e) => { e.preventDefault(); keyboard.openKeyboard(mobileInput, mobileGroup); });
+                        mobileInput.addEventListener('mousedown', (e) => e.preventDefault());
+                    }
+                    if(smsInput && smsGroup) {
+                        smsInput.addEventListener('focus', (e) => { e.preventDefault(); keyboard.openKeyboard(smsInput, smsGroup); });
+                        smsInput.addEventListener('click', (e) => { e.preventDefault(); keyboard.openKeyboard(smsInput, smsGroup); });
+                        smsInput.addEventListener('mousedown', (e) => e.preventDefault());
+                    }
+                }
+
+                function switchTab(tab) {
+                    activeTab = tab;
+                    document.querySelectorAll('.login-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+                    document.querySelectorAll('.login-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+                    if(tab === 'qr') startQR(); else stopQR();
+                }
+                async function startQR() {
+                    stopQR();
+                    const qrBox = document.getElementById('qrBox');
+                    try {
+                        const keyRes = await fetch(`${API_BASE}/login/qr/key?timestamp=${Date.now()}`, { credentials: 'include' });
+                        const keyData = await keyRes.json();
+                        const key = keyData.data?.key;
+                        if(!key) throw new Error();
+                        qrKey = key;
+                        const qrRes = await fetch(`${API_BASE}/login/qr/create?key=${qrKey}&qrimg=1&timestamp=${Date.now()}`, { credentials: 'include' });
+                        const qrData = await qrRes.json();
+                        if(qrData.data?.qrimg) qrBox.innerHTML = `<img src="${qrData.data.qrimg}" style="width:100%;height:100%;object-fit:contain">`;
+                        else qrBox.innerHTML = '二维码失败';
+                        qrTimer = setInterval(async () => {
+                            try {
+                                const check = await fetch(`${API_BASE}/login/qr/check?key=${qrKey}&timestamp=${Date.now()}`, { credentials: 'include' });
+                                const st = await check.json();
+                                const code = st.data?.status ?? st.status;
+                                if(code === 4) {
+                                    const token = st.data?.token || st.token;
+                                    const uid = st.data?.userid || st.userid;
+                                    if(token && uid) {
+                                        saveLoginState(token, uid);
+                                        resolveLogin(true);
+                                        modal.remove();
+                                        if(keyboardOverlay) keyboardOverlay.remove();
+                                    }
+                                } else if(code === 0) { qrBox.innerHTML = '二维码过期'; stopQR(); }
+                            } catch(_) {}
+                        }, 2000);
+                    } catch(e) { qrBox.innerHTML = '网络异常'; }
+                }
+                function stopQR() { if(qrTimer) clearInterval(qrTimer); qrTimer = null; qrKey = null; }
+                async function sendSms() {
+                    const mobile = document.getElementById('mobileInput').value.trim();
+                    if(mobile.length !== 11) { toast('请输入11位手机号'); return; }
+                    const btn = document.getElementById('sendCodeBtn');
+                    btn.disabled = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/captcha/sent?mobile=${encodeURIComponent(mobile)}&timestamp=${Date.now()}`, { credentials: 'include' });
+                        const data = await res.json();
+                        if(data.status === 1 || data.code === 200) {
+                            toast('验证码已发送');
+                            let sec = 60;
+                            const timer = setInterval(() => { sec--; if(sec<=0) { clearInterval(timer); btn.disabled=false; btn.innerText='获取验证码'; } else btn.innerText=sec+'s'; }, 1000);
+                        } else { toast('发送失败'); btn.disabled=false; }
+                    } catch(e) { toast('网络错误'); btn.disabled=false; }
+                }
+                async function doLogin() {
+                    if(activeTab === 'sms') {
+                        const mobile = document.getElementById('mobileInput').value.trim();
+                        const code = document.getElementById('smsCodeInput').value.trim();
+                        if(!mobile || !code) { toast('请填写手机号和验证码'); return; }
+                        try {
+                            const res = await fetch(`${API_BASE}/login/cellphone?mobile=${encodeURIComponent(mobile)}&code=${encodeURIComponent(code)}&timestamp=${Date.now()}`, { credentials: 'include' });
+                            const data = await res.json();
+                            if(data.code === 200 || data.status === 1) {
+                                const token = data.token || data.data?.token;
+                                const uid = data.userid || data.data?.userid;
+                                if(token && uid) saveLoginState(token, uid);
+                                resolveLogin(true); modal.remove(); if(keyboardOverlay) keyboardOverlay.remove();
+                            } else toast(data.message || '登录失败');
+                        } catch(e) { toast('网络错误'); }
+                    } else if(activeTab === 'pwd') {
+                        const username = document.getElementById('userInput').value.trim();
+                        const pwd = document.getElementById('passInput').value;
+                        if(!username || !pwd) { toast('请填写用户名和密码'); return; }
+                        try {
+                            const res = await fetch(`${API_BASE}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(pwd)}&timestamp=${Date.now()}`, { credentials: 'include' });
+                            const data = await res.json();
+                            if(data.code === 200 || data.status === 1) {
+                                const token = data.token || data.data?.token;
+                                const uid = data.userid || data.data?.userid;
+                                if(token && uid) saveLoginState(token, uid);
+                                resolveLogin(true); modal.remove(); if(keyboardOverlay) keyboardOverlay.remove();
+                            } else toast(data.message || '登录失败');
+                        } catch(e) { toast('网络错误'); }
+                    } else {
+                        toast('请使用酷狗概念版扫码');
+                    }
+                }
+                function saveLoginState(token, userId) {
+                    const expire = new Date(); expire.setDate(expire.getDate() + 30);
+                    document.cookie = `token=${token}; path=/; expires=${expire.toUTCString()}`;
+                    document.cookie = `userid=${userId}; path=/; expires=${expire.toUTCString()}`;
+                }
+                function resolveLogin(success) { loginModalActive = false; resolve(success); }
+                document.getElementById('closeLoginBtn').onclick = () => { resolveLogin(false); modal.remove(); if(keyboardOverlay) keyboardOverlay.remove(); };
+                document.getElementById('sendCodeBtn').onclick = sendSms;
+                document.getElementById('doLoginBtn').onclick = doLogin;
+                document.querySelectorAll('.login-tab').forEach(tab => { tab.onclick = () => switchTab(tab.dataset.tab); });
+                bindInputs(); switchTab('sms');
+            });
+        }
+
+        async function ensureLoggedIn() {
+            const token = document.cookie.match(/token=([^;]+)/)?.[1];
+            if(token) return true;
+            toast('请先点击“重新登录”按钮完成登录');
+            return false;
+        }
+
+        // ---------- 测试定义 ----------
+        const testDefinitions = [
+            { name: '1. 获取设备标识 dfid', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/register/dev?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '2. 手机验证码发送 (测试手机号 13800138000)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/captcha/sent?mobile=13800138000&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '3. 搜索歌曲 (关键词: 海阔天空)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/search?keywords=海阔天空&pagesize=3&timestamp=${Date.now()}`;
+                const result = await detailedFetch(url, { method: 'GET' });
+                if (result.ok && result.data && (result.data.data?.lists || result.data.lists)) {
+                    const list = result.data.data?.lists || result.data.lists;
+                    if (list[0] && list[0].FileHash) {
+                        savedSongHash = list[0].FileHash;
+                        savedAlbumAudioId = list[0].AlbumAudioID || list[0].album_audio_id || null;
+                        toast(`已保存哈希: ${savedSongHash}${savedAlbumAudioId ? `, album_audio_id: ${savedAlbumAudioId}` : ''}`);
+                    } else if (list[0] && list[0].Hash) {
+                        savedSongHash = list[0].Hash;
+                        toast(`已保存哈希: ${savedSongHash}`);
+                    } else {
+                        toast('未找到哈希，请检查响应结构');
+                    }
+                }
+                return result;
+            } },
+            { name: '4. 获取音乐 URL (旧版, quality=128)', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                // 添加 quality=128 参数，可选参数示例：album_audio_id 如果需要可加
+                const url = `${API_BASE}/song/url?hash=${savedSongHash}&quality=128&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '5. 获取音乐 URL (新版, 带 album_audio_id)', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                let albumAudioIdParam = '';
+                if (savedAlbumAudioId) albumAudioIdParam = `&album_audio_id=${savedAlbumAudioId}`;
+                const url = `${API_BASE}/song/url/new?hash=${savedSongHash}${albumAudioIdParam}&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '6. 歌词搜索 (夜曲)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/search/lyric?keywords=夜曲&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '7. 获取歌单分类', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/playlist/tags?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '8. 热门歌单推荐', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/top/playlist?category_id=0&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '9. 新碟上架', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/top/album?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '10. 专辑详情 (ID: 10729818)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/album/detail?id=10729818&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '11. 专辑歌曲列表 (ID: 10729818)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/album/songs?id=10729818&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '12. 获取歌手和专辑图片', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                const url = `${API_BASE}/images?hash=${savedSongHash}&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '13. 获取歌手图片', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                const url = `${API_BASE}/images/audio?hash=${savedSongHash}&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '14. 获取音乐相关信息', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                const url = `${API_BASE}/audio?hash=${savedSongHash}&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '15. 获取音乐详情', needLogin: false, needHash: true, fn: async () => {
+                if (!savedSongHash) throw new Error('请先执行“3. 搜索歌曲”测试');
+                const url = `${API_BASE}/privilege/lite?hash=${savedSongHash}&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '16. 获取音乐评论 (mixsongid: 302362878)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/comment/music?mixsongid=302362878&pagesize=3&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '17. 歌单评论', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/comment/playlist?id=collection_3_1373407643_366_0&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '18. 私人 FM', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/personal/fm?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '19. 每日推荐', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/everyday/recommend?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '20. AI 推荐 (album_audio_id: 274565080)', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/ai/recommend?album_audio_id=274565080&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '21. 获取歌曲 MV', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/kmr/audio/mv?album_audio_id=32155307&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '22. 排行榜列表', needLogin: false, needHash: false, fn: async () => {
+                const url = `${API_BASE}/rank/list?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '23. 获取用户歌单 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/playlist?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '24. 获取用户信息 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/detail?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '25. 获取用户 VIP 信息 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/vip/detail?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '26. 获取用户关注歌手 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/follow?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '27. 获取用户听歌历史排行 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/listen?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '28. 获取用户最近听歌历史 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/user/history?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '29. 获取继续播放信息 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/lastest/songs/listen?timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } },
+            { name: '30. 收藏歌曲示例 (需登录)', needLogin: true, needHash: false, fn: async () => {
+                const url = `${API_BASE}/playlist/tracks/add?listid=1&data=test|testhash&timestamp=${Date.now()}`;
+                return await detailedFetch(url, { method: 'GET' });
+            } }
+        ];
+
+        async function runTest(def) {
+            try {
+                if (def.needLogin) {
+                    const logged = await ensureLoggedIn();
+                    if (!logged) { toast('请先点击“重新登录”按钮'); return; }
+                }
+                if (def.needHash && !savedSongHash) {
+                    toast('请先执行“3. 搜索歌曲”测试，获取歌曲哈希');
+                    return;
+                }
+                await fetchDfid();
+                const result = await def.fn();
+                const isError = !result.ok;
+                renderLog(def.name, result.requestDetails, result.responseDetails, result.duration, isError);
+                toast(isError ? `测试失败: ${def.name}` : `测试完成: ${def.name}`);
+            } catch (err) {
+                renderLog(def.name, { url: 'error', method: 'GET' }, { status: 0, statusText: err.message, headers: {}, body: err.message }, 0, true);
+                toast(`测试异常: ${err.message}`);
+            }
+        }
+
+        function buildButtons() {
+            const container = document.getElementById('apiButtons');
+            container.innerHTML = '';
+            testDefinitions.forEach(def => {
+                const btn = document.createElement('button');
+                btn.className = 'api-btn';
+                btn.textContent = def.name;
+                btn.addEventListener('click', () => runTest(def));
+                container.appendChild(btn);
+            });
+        }
+
+        function downloadCurrentLog() {
+            if (!currentTestResult) { toast('无可下载的日志，请先执行一项测试'); return; }
+            const jsonStr = JSON.stringify(currentTestResult, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
+            const a = document.createElement('a');
+            a.href = dataUri;
+            a.download = `kugou_test_${currentTestResult.testName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().slice(0,19)}.json`;
+            a.click();
+            toast('下载已开始 (DataURL)');
+        }
+
+        document.getElementById('downloadBtn').addEventListener('click', downloadCurrentLog);
+        document.getElementById('reloginBtn').addEventListener('click', async () => {
+            await showLoginModal();
+            toast('登录完成，可继续测试');
+        });
+        buildButtons();
+        fetchDfid().catch(console.warn);
+    })();
+</script>
+</body>
+</html>
